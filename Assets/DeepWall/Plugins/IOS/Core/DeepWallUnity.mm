@@ -2,7 +2,6 @@
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 #import "DeepWall/DeepWall.h"
-#import "DWRUserProperties.h"
 
 extern UIViewController *UnityGetGLViewController();
 
@@ -32,24 +31,13 @@ extern UIViewController *UnityGetGLViewController();
 	[DeepWallCore initializeWithApiKey:apiKey environment:env];
 	}
 
-+(void)setUserProperties:(NSString*)uuid country:(NSString *) country language:(NSString *) language
++(void)setUserProperties:(NSString*)uuid country:(NSString *) country language:(NSString *) language environmentStyle:(long) environmentStyle
 {
-	id objects[] = { uuid, country, language };
-	id keys[] = { @"uuid", @"country", @"language"};
-	NSUInteger count = sizeof(objects) / sizeof(id);
-	NSDictionary *props = [NSDictionary dictionaryWithObjects:objects
-													  forKeys:keys
-														count:count];
-	NSError *error;
-
-	DWRUserProperties *dwProps = [[DWRUserProperties alloc] initWithDictionary:props error:&error];
+	DeepWallEnvironmentStyle dwEnvironmentStyle = (DeepWallEnvironmentStyle)environmentStyle;
 	
-	if (error != nil) {
-		NSLog(@"[UnityDeepWall Failed to set user properties!");
-		return;
-	}
+	DeepWallUserProperties *dwProps = [[DeepWallUserProperties alloc] initWithUuid:uuid country:country language:language environmentStyle:dwEnvironmentStyle];
 	
-	[[DeepWallCore shared] setUserProperties:[dwProps toDWObject]];
+	[[DeepWallCore shared] setUserProperties:dwProps];
 }
 
 
@@ -65,15 +53,9 @@ extern UIViewController *UnityGetGLViewController();
 		dwLanguage = [DeepWallLanguageManager getLanguageByCode:language];
 	}
 	
-	DeepWallEnvironmentStyle dwEnvironmentStyle;
-	if (environmentStyle != 0) {
-		dwEnvironmentStyle = (DeepWallEnvironmentStyle)environmentStyle;
-	} else {
-		dwEnvironmentStyle = [[DeepWallCore shared] userProperties].environmentStyle;
-	}
+	DeepWallEnvironmentStyle dwEnvironmentStyle = (DeepWallEnvironmentStyle)environmentStyle;
 	
 	[[DeepWallCore shared] updateUserPropertiesCountry:dwCountry language:dwLanguage environmentStyle:dwEnvironmentStyle debugAdvertiseAttributions:nil];
-	
 }
 
 
@@ -89,6 +71,40 @@ extern UIViewController *UnityGetGLViewController();
 	
 	dispatch_async(dispatch_get_main_queue(), ^{
 		[[DeepWallCore shared] requestPaywallWithAction:action inView:UnityGetGLViewController() extraData:extraDataDict];
+	});
+}
+
++(void)requestAppTracking:(NSString *)action extraData:(NSString *)extraData {
+	NSDictionary *extraDataDict;
+	if (extraData != nil){
+		NSError *jsonError;
+		NSData *objectData = [extraData dataUsingEncoding:NSUTF8StringEncoding];
+		extraDataDict = [NSJSONSerialization JSONObjectWithData:objectData
+														options:NSJSONReadingMutableContainers
+														  error:&jsonError];
+	}
+	
+	dispatch_async(dispatch_get_main_queue(), ^{
+		if (@available(iOS 14, *)) {
+			[[DeepWallCore shared] requestAppTrackingWithAction:action inView:UnityGetGLViewController() extraData:extraDataDict];
+		} else {
+			NSLog(@"UnityDeepWall Failed to call requestAppTracking. This feature requires ios14+");
+		}
+	});
+}
+
++(void)sendExtraDataToPaywall:(NSString *)extraData {
+	NSDictionary *extraDataDict;
+	if (extraData != nil){
+		NSError *jsonError;
+		NSData *objectData = [extraData dataUsingEncoding:NSUTF8StringEncoding];
+		extraDataDict = [NSJSONSerialization JSONObjectWithData:objectData
+														options:NSJSONReadingMutableContainers
+														  error:&jsonError];
+	}
+	
+	dispatch_async(dispatch_get_main_queue(), ^{
+		[[DeepWallCore shared] sendExtraDataToPaywall:extraDataDict];
 	});
 }
 
@@ -234,6 +250,10 @@ extern UIViewController *UnityGetGLViewController();
 	UnitySendMessage("DeepWall", "DeepWallPaywallRestoreFailed", cData);
 }
 
++ (void)deepWallATTStatusChanged {
+	UnitySendMessage("DeepWall", "DeepWallATTStatusChanged", "");
+}
+
 @end
 
 extern "C"
@@ -246,8 +266,9 @@ void _InitDeepWall(const char *apiKey, const int envirovement)
 void _SetUserProperties(const char *uuid, const char *country, const char *language, const int envStyle)
 {
 	[iOSPlugin setUserProperties:[NSString stringWithUTF8String:uuid]
-						 country:[NSString stringWithUTF8String:country]
-						language: [NSString stringWithUTF8String:language]];
+								 country:[NSString stringWithUTF8String:country]
+								language: [NSString stringWithUTF8String:language]
+								environmentStyle:envStyle];
 }
 
 void _UpdateUserProperties(const char *uuid, const char *country, const char *language, const int envStyle)
@@ -266,6 +287,24 @@ void _RequestPaywall(const char *action, const char *extraData)
 		[iOSPlugin requestPaywall:[NSString stringWithUTF8String:action] extraData:nil];
 	}
 }
+void _RequestAppTracking(const char *action, const char *extraData)
+{
+	if (extraData != nil){
+	[iOSPlugin requestAppTracking:[NSString stringWithUTF8String:action] extraData:[NSString stringWithUTF8String:extraData]];
+	}else {
+		[iOSPlugin requestAppTracking:[NSString stringWithUTF8String:action] extraData:nil];
+	}
+}
+
+void _SendExtraDataToPaywall(const char *extraData)
+{
+	if (extraData != nil){
+	[iOSPlugin sendExtraDataToPaywall: [NSString stringWithUTF8String:extraData]];
+	}else {
+		[iOSPlugin sendExtraDataToPaywall: nil];
+	}
+}
+
 
 void _ClosePaywall()
 {

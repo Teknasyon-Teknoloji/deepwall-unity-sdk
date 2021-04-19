@@ -1,3 +1,5 @@
+using System;
+using System.Runtime.InteropServices;
 using JetBrains.Annotations;
 using UnityEngine;
 
@@ -17,7 +19,13 @@ namespace DeepWallModule
 
         [DllImport("__Internal")]
         private static extern void _RequestPaywall(string action, [CanBeNull] string extraData);
-        
+
+        [DllImport("__Internal")]
+        private static extern void _RequestAppTracking(string action, [CanBeNull] string extraData);
+
+        [DllImport("__Internal")]
+        private static extern void _SendExtraDataToPaywall(string extraData);
+
         [DllImport("__Internal")]
         private static extern void _ClosePaywall();
 
@@ -32,13 +40,16 @@ namespace DeepWallModule
         private const string AndroidUpdateUserPropertiesMethod = "updateUserProperties";
         private const string AndroidRequestPaywallMethod = "requestPaywall";
         private const string AndroidClosePaywallMethod = "closePaywall";
+        private const string AndroidSetProductUpgradePolicyMethod = "setProductUpgradePolicy";
+        private const string AndroidUpdateProductUpgradePolicyMethod = "updateProductUpgradePolicy";
+        private const string AndroidConsumeProductMethod = "consumeProduct";
 #endif
         private const string DeepWallGameObjectName = "DeepWall";
 
         private static DeepWall _instance;
         private static string _apiKey;
         private static byte _environment;
-        private static IDeepWallEventListener _eventListener;
+        [CanBeNull] private static IDeepWallEventListener _eventListener;
 
         private static bool _dontDestroyOnLoad = true;
 
@@ -132,6 +143,29 @@ namespace DeepWallModule
         }
 
         /// <summary>
+        /// Call this method for showing ATT prompts.
+        /// </summary>
+        public static void RequestAppTracking(string actionKey, [CanBeNull] string extraData)
+        {
+#if UNITY_IOS
+            _RequestAppTracking(actionKey, extraData);
+#endif
+#if UNITY_ANDROID
+            androidDeepWall.Call(AndroidRequestPaywallMethod, actionKey, extraData);
+#endif
+        }
+
+        /// <summary>
+        /// Call this method for sending extradata to Paywall. [iOS Only]
+        /// </summary>
+        public static void SendExtraDataToPaywall(string extraData)
+        {
+#if UNITY_IOS
+            _SendExtraDataToPaywall(extraData);
+#endif
+        }
+
+        /// <summary>
         /// Call this method to close Paywall dialog.
         /// </summary>
         public static void ClosePaywall()
@@ -144,6 +178,38 @@ namespace DeepWallModule
 #endif
         }
 
+
+        /// <summary>
+        /// Call this method to handle subscription upgrade or downgrade processes. [Android Only]
+        /// </summary>
+        public static void SetProductUpgradePolicy(ProrationType prorationType, PurchaseUpgradePolicyType upgradePolicy)
+        {
+#if UNITY_ANDROID
+            androidDeepWall.Call(AndroidSetProductUpgradePolicyMethod, (int) prorationType, (int) upgradePolicy);
+#endif
+        }
+
+        /// <summary>
+        /// Call this method to update the product upgrade policy of your paywalls. [Android Only]
+        /// </summary>
+        public static void UpdateProductUpgradePolicy(ProrationType prorationType,
+            PurchaseUpgradePolicyType upgradePolicy)
+        {
+#if UNITY_ANDROID
+            androidDeepWall.Call(AndroidUpdateProductUpgradePolicyMethod, (int) prorationType, (int) upgradePolicy);
+#endif
+        }
+
+        /// <summary>
+        /// Call this method to consume your products. [Android Only]
+        /// </summary>
+        public static void ConsumeProduct(string productId)
+        {
+#if UNITY_ANDROID
+            androidDeepWall.Call(AndroidConsumeProductMethod, productId);
+#endif
+        }
+
         public static void ShowAlertMessage(string message)
         {
 #if UNITY_IOS
@@ -153,6 +219,15 @@ namespace DeepWallModule
 #endif
         }
 
+        public static void SetEventListener([CanBeNull] IDeepWallEventListener listener)
+        {
+            _eventListener = listener;
+        }
+
+        public static void RemoveEventListener()
+        {
+            _eventListener = null;
+        }
 
         #region NATIVE_LEVEL_EVENTS
 
@@ -161,13 +236,13 @@ namespace DeepWallModule
         /// </summary>
         public void DeepWallPaywallRequested()
         {
-            _eventListener.OnDeepWallPaywallRequested();
+            _eventListener?.OnDeepWallPaywallRequested();
         }
 
         //Fired after paywall response received. Useful for hiding loading indicator in your app.
         public void DeepWallPaywallResponseReceived()
         {
-            _eventListener.DeepWallPaywallResponseReceived();
+            _eventListener?.DeepWallPaywallResponseReceived();
         }
 
         //Paywall response failure event
@@ -177,41 +252,41 @@ namespace DeepWallModule
                 JsonUtility.FromJson<DeepWallPaywallResponseFailureModel>(eventData);
             string errorCode = paywallResponseFailureResponse.errorCode;
             string reason = paywallResponseFailureResponse.reason;
-            _eventListener.DeepWallPaywallResponseFailure(errorCode, reason);
+            _eventListener?.DeepWallPaywallResponseFailure(errorCode, reason);
         }
 
         //Paywall opened event
         public void DeepWallPaywallOpened(string eventData)
         {
             int pageId = JsonUtility.FromJson<DeepWallCommonResponseModel>(eventData).pageId;
-            _eventListener.DeepWallPaywallOpened(pageId);
+            _eventListener?.DeepWallPaywallOpened(pageId);
         }
 
         //Paywall not opened event. Fired on error cases only.
         public void DeepWallPaywallNotOpened(string eventData)
         {
             int pageId = JsonUtility.FromJson<DeepWallCommonResponseModel>(eventData).pageId;
-            _eventListener.DeepWallPaywallNotOpened(pageId);
+            _eventListener?.DeepWallPaywallNotOpened(pageId);
         }
 
         //Paywall action show disabled event.
         public void DeepWallPaywallActionShowDisabled(string eventData)
         {
             int pageId = JsonUtility.FromJson<DeepWallCommonResponseModel>(eventData).pageId;
-            _eventListener.DeepWallPaywallActionShowDisabled(pageId);
+            _eventListener?.DeepWallPaywallActionShowDisabled(pageId);
         }
 
         //Paywall closed event
         public void DeepWallPaywallClosed(string eventData)
         {
             int pageId = JsonUtility.FromJson<DeepWallCommonResponseModel>(eventData).pageId;
-            _eventListener.DeepWallPaywallClosed(pageId);
+            _eventListener?.DeepWallPaywallClosed(pageId);
         }
 
         //Paywall purchasing product event
         public void DeepWallPaywallPurchasingProduct(string eventData)
         {
-            _eventListener.DeepWallPaywallPurchasingProduct(eventData);
+            _eventListener?.DeepWallPaywallPurchasingProduct(eventData);
         }
 
         //Purchase success event. Fired after receipt validation if Ploutos service active.
@@ -220,7 +295,7 @@ namespace DeepWallModule
             var paywallPurchaseSuccess = JsonUtility.FromJson<PaywallPurchaseSuccessModel>(eventData);
             int type = paywallPurchaseSuccess.type;
             string result = paywallPurchaseSuccess.result;
-            _eventListener.DeepWallPaywallPurchaseSuccess(type, result);
+            _eventListener?.DeepWallPaywallPurchaseSuccess(type, result);
         }
 
         //Purchase failed event
@@ -231,13 +306,13 @@ namespace DeepWallModule
             string reason = paywallPurchaseFailed.reason;
             string errorCode = paywallPurchaseFailed.errorCode;
             bool isPaymentCancelled = paywallPurchaseFailed.isPaymentCancelled;
-            _eventListener.DeepWallPaywallPurchaseFailed(productCode, reason, errorCode, isPaymentCancelled);
+            _eventListener?.DeepWallPaywallPurchaseFailed(productCode, reason, errorCode, isPaymentCancelled);
         }
 
         //Restore success event
         public void DeepWallPaywallRestoreSuccess(string eventData)
         {
-            _eventListener.DeepWallPaywallRestoreSuccess();
+            _eventListener?.DeepWallPaywallRestoreSuccess();
         }
 
         //Restore failed event
@@ -248,23 +323,28 @@ namespace DeepWallModule
             string reason = paywallRestoreFailed.reason;
             string errorCode = paywallRestoreFailed.errorCode;
             bool isPaymentCancelled = paywallRestoreFailed.isPaymentCancelled;
-            _eventListener.DeepWallPaywallRestoreFailed(productCode, reason, errorCode, isPaymentCancelled);
+            _eventListener?.DeepWallPaywallRestoreFailed(productCode, reason, errorCode, isPaymentCancelled);
         }
 
         //Extra data received event
         public void DeepWallPaywallExtraDataReceived(string eventData)
         {
-            _eventListener.DeepWallPaywallExtraDataReceived(eventData);
+            _eventListener?.DeepWallPaywallExtraDataReceived(eventData);
         }
 
         public void DeepWallPaywallConsumeSuccess(string eventData)
         {
-            _eventListener.DeepWallPaywallConsumeSuccess(eventData);
+            _eventListener?.DeepWallPaywallConsumeSuccess(eventData);
         }
 
         public void DeepWallPaywallConsumeFail(string eventData)
         {
-            _eventListener.DeepWallPaywallConsumeFail(eventData);
+            _eventListener?.DeepWallPaywallConsumeFail(eventData);
+        }
+
+        public void DeepWallATTStatusChanged()
+        {
+            _eventListener?.DeepWallATTStatusChanged();
         }
 
         #endregion

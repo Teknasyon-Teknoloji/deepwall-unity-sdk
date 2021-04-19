@@ -42,6 +42,18 @@ namespace DeepWallModule
 
             testText.text += "\nSuccessfully called requestPaywall";
         }
+        
+        public void RequestAppTrackingClicked()
+        {
+            string actionKey = "Settings";
+            DeepWall.RequestAppTracking(actionKey, null);
+
+            /* You can send extra parameter if needed as below:
+            DeepWall.RequestAppTrackingClicked(actionKey, "{\"sliderIndex\": 2, \"title\": \"Deepwall\"}"); 
+            */
+
+            testText.text += "\nSuccessfully called RequestAppTracking";
+        }
 
         public void UpdateUserpropertiesClicked()
         {
@@ -148,6 +160,11 @@ namespace DeepWallModule
         public void DeepWallPaywallConsumeFail(string data)
         {
             UpdateStatusText($"DeepWallPaywallConsumeFail data:{data}");
+        }
+
+        public void DeepWallATTStatusChanged()
+        {
+            UpdateStatusText($"DeepWallATTStatusChanged");
         }
     }
 }

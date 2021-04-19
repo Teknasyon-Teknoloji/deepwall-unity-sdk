@@ -46,5 +46,7 @@ namespace DeepWallModule
         void DeepWallPaywallConsumeSuccess(string data);
 
         void DeepWallPaywallConsumeFail(string data);
+
+        void DeepWallATTStatusChanged();
     }
 }

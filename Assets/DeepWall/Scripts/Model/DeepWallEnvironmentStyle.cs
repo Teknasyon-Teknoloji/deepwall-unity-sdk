@@ -7,7 +7,7 @@ namespace DeepWallModule
 //Environment style for paywall appearance.
     public enum DeepWallEnvironmentStyle
     {
-        Automatic = 2,
+        Automatic = 999,
         LIGHT = 0,
         DARK = 1
     }
