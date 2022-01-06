@@ -2,6 +2,8 @@
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 #import "DeepWall/DeepWall.h"
+#import "DWRUserProperties.h"
+
 
 extern UIViewController *UnityGetGLViewController();
 
@@ -27,39 +29,75 @@ extern UIViewController *UnityGetGLViewController();
 		env = DeepWallEnvironmentProduction;
 	}
 	
-	[[DeepWallCore shared] observeEventsFor:self];
+	[[DeepWallCore shared] observeEventsFor:[iOSPlugin self]];
 	[DeepWallCore initializeWithApiKey:apiKey environment:env];
 	}
 
-+(void)setUserProperties:(NSString*)uuid country:(NSString *) country language:(NSString *) language environmentStyle:(long) environmentStyle
++(void)setUserProperties:(NSString*)uuid country:(NSString *) country language:(NSString *) language phoneNumber:(NSString *) phoneNumber emailAdress:(NSString *) emailAdress firstName:(NSString *) firstname lastName:(NSString *) lastName envStyle:(NSNumber*) environmentStyle debugAdvertiseAttributions:(NSArray *)debugAdvertiseAttributions
 {
-	DeepWallEnvironmentStyle dwEnvironmentStyle = (DeepWallEnvironmentStyle)environmentStyle;
+	DWRUserProperties *dwProps = [[DWRUserProperties alloc] init];
+	if (dwProps){
+		dwProps.uuid = uuid;
+		dwProps.country = country;
+		dwProps.language = language;
+		dwProps.environmentStyle = environmentStyle;
+		dwProps.phoneNumber = phoneNumber;
+		dwProps.emailAddress = emailAdress;
+		dwProps.firstName = firstname;
+		dwProps.lastName = lastName;
+	}else{
+		NSLog(@"[UnityDeepWall Failed to set user properties!");
+		return;
+	}
 	
-	DeepWallUserProperties *dwProps = [[DeepWallUserProperties alloc] initWithUuid:uuid country:country language:language environmentStyle:dwEnvironmentStyle];
-	
-	[[DeepWallCore shared] setUserProperties:dwProps];
+	[[DeepWallCore shared] setUserProperties:[dwProps toDWObject]];
 }
 
 
-+(void)updateUserProperties:(NSString*)uuid country:(NSString *) country language:(NSString *) language envStyle:(long) environmentStyle
++ (void)updateUserProperties:(nullable NSString*)uuid country:(nullable NSString *)country language:(nullable NSString *)language phoneNumber:(nullable NSString *)phoneNumber emailAddress:(nullable NSString *)emailAddress firstName:(nullable NSString *)firstName lastName:(nullable NSString *)lastName envStyle:(long) environmentStyle debugAdvertiseAttributions:(nullable NSArray *)debugAdvertiseAttributions
 {
 	NSString *dwCountry = nil;
 	if (country != nil) {
 		dwCountry = [DeepWallCountryManager getCountryByCode:country];
 	}
-	
+
 	NSString *dwLanguage = nil;
 	if (language != nil) {
 		dwLanguage = [DeepWallLanguageManager getLanguageByCode:language];
 	}
-	
-	DeepWallEnvironmentStyle dwEnvironmentStyle = (DeepWallEnvironmentStyle)environmentStyle;
-	
+
+	DeepWallEnvironmentStyle dwEnvironmentStyle;
+	if (environmentStyle != 0) {
+		dwEnvironmentStyle = (DeepWallEnvironmentStyle)environmentStyle;
+	} else {
+		dwEnvironmentStyle = [[DeepWallCore shared] userProperties].environmentStyle;
+	}
+
+
 	[[DeepWallCore shared] updateUserPropertiesCountry:dwCountry language:dwLanguage environmentStyle:dwEnvironmentStyle debugAdvertiseAttributions:nil];
+
+	
+	DeepWallUserProperties *dwProps = [[DeepWallCore shared] userProperties];
+	
+	
+	if (phoneNumber != nil){
+		dwProps.phoneNumber = phoneNumber;
+	}
+	if (emailAddress != nil){
+		dwProps.emailAddress = emailAddress;
+	}
+	if (firstName != nil){
+		dwProps.firstName = firstName;
+	}
+	if (lastName != nil){
+		dwProps.lastName = lastName;
+	}
+	 
 }
 
 
 +(void)requestPaywall:(NSString *)action extraData:(NSString *)extraData {
+		
 	NSDictionary *extraDataDict;
 	if (extraData != nil){
 		NSError *jsonError;
@@ -263,20 +301,29 @@ void _InitDeepWall(const char *apiKey, const int envirovement)
 	[iOSPlugin initDeepWall:[NSString stringWithUTF8String:apiKey] environment:envirovement];
 }
 
-void _SetUserProperties(const char *uuid, const char *country, const char *language, const int envStyle)
+void _SetUserProperties(const char *uuid, const char *country, const char *language, const char *phoneNumber, const char *emailAdress, const char *firstName, const char *lastName, const int envStyle)
 {
 	[iOSPlugin setUserProperties:[NSString stringWithUTF8String:uuid]
-								 country:[NSString stringWithUTF8String:country]
-								language: [NSString stringWithUTF8String:language]
-								environmentStyle:envStyle];
+					country:[NSString stringWithUTF8String:country]
+					language: [NSString stringWithUTF8String:language]
+					phoneNumber: [NSString stringWithUTF8String:phoneNumber]
+					emailAdress: [NSString stringWithUTF8String:emailAdress]
+					firstName: [NSString stringWithUTF8String:firstName]
+					lastName: [NSString stringWithUTF8String:lastName]
+					envStyle:[NSNumber numberWithInt:envStyle]
+					debugAdvertiseAttributions:nil];
 }
 
-void _UpdateUserProperties(const char *uuid, const char *country, const char *language, const int envStyle)
+void _UpdateUserProperties(const char *uuid, const char *country, const char *language,  const char *phoneNumber, const char *emailAdress, const char *firstName, const char *lastName, const int envStyle)
 {
 	[iOSPlugin updateUserProperties:[NSString stringWithUTF8String:uuid]
-							country:[NSString stringWithUTF8String:country]
-						   language: [NSString stringWithUTF8String:language]
-						   envStyle:envStyle];
+					country:[NSString stringWithUTF8String:country]
+					language:[NSString stringWithUTF8String:language]
+					phoneNumber:[NSString stringWithUTF8String:phoneNumber]
+					emailAddress:[NSString stringWithUTF8String:emailAdress]
+					firstName:[NSString stringWithUTF8String:firstName]
+					lastName:[NSString stringWithUTF8String:lastName]
+					envStyle:envStyle debugAdvertiseAttributions:nil];
 }
 
 void _RequestPaywall(const char *action, const char *extraData)
