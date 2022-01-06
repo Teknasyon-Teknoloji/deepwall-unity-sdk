@@ -12,10 +12,10 @@ namespace DeepWallModule
         private static extern void _InitDeepWall(string apiKey, int env);
 
         [DllImport("__Internal")]
-        private static extern void _SetUserProperties(string uuid, string country, string language, int envStyle);
+        private static extern void _SetUserProperties(string uuid, string country, string language, string phoneNumber, string email, string firstName, string lastName, int envStyle);
 
         [DllImport("__Internal")]
-        private static extern void _UpdateUserProperties(string uuid, string country, string language, int envStyle);
+        private static extern void _UpdateUserProperties(string uuid, string country, string language, string phoneNumber, string email, string firstName, string lastName, int envStyle);
 
         [DllImport("__Internal")]
         private static extern void _RequestPaywall(string action, [CanBeNull] string extraData);
@@ -92,7 +92,7 @@ namespace DeepWallModule
 #elif UNITY_ANDROID
             DeepWall._apiKey = androidApiKey;
 #endif
-            DeepWall._environment = (byte) environment;
+            DeepWall._environment = (byte)environment;
             DeepWall._eventListener = deepWallEventListener;
             DeepWall._dontDestroyOnLoad = dontDestroyOnLoad;
 
@@ -106,11 +106,11 @@ namespace DeepWallModule
         public static void SetUserProperties(DeepWallUserProperty userProperty)
         {
 #if UNITY_IOS
-            _SetUserProperties(userProperty.UUID, userProperty.Country, userProperty.Language,
-                (int) userProperty.EnvironmentStyle);
+            _SetUserProperties(userProperty.UUID, userProperty.Country, userProperty.Language, userProperty.PhoneNumber, userProperty.Email, userProperty.FirstName, userProperty.LastName,
+                (int)userProperty.EnvironmentStyle);
 #elif UNITY_ANDROID
             androidDeepWall.Call(AndroidSetUserPropertiesMethod, userProperty.UUID, userProperty.Country,
-                userProperty.Language,
+                userProperty.Language, userProperty.PhoneNumber, userProperty.Email, userProperty.FirstName, userProperty.LastName,
                 (int) userProperty.EnvironmentStyle);
 #endif
         }
@@ -121,10 +121,10 @@ namespace DeepWallModule
         public static void UpdateUserProperties(DeepWallUserProperty userProperty)
         {
 #if UNITY_IOS
-            _UpdateUserProperties(userProperty.UUID, userProperty.Country, userProperty.Language,
-                (int) userProperty.EnvironmentStyle);
+            _UpdateUserProperties(userProperty.UUID, userProperty.Country, userProperty.Language, userProperty.PhoneNumber, userProperty.Email, userProperty.FirstName, userProperty.LastName,
+                (int)userProperty.EnvironmentStyle);
 #elif UNITY_ANDROID
-            androidDeepWall.Call(AndroidUpdateUserPropertiesMethod, userProperty.Country, userProperty.Language,
+            androidDeepWall.Call(AndroidUpdateUserPropertiesMethod, userProperty.Country, userProperty.Language, userProperty.PhoneNumber, userProperty.Email, userProperty.FirstName, userProperty.LastName,
                 (int) userProperty.EnvironmentStyle);
 #endif
         }
