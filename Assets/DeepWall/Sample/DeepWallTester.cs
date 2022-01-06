@@ -24,7 +24,7 @@ namespace DeepWallModule
         public void SetUserPropertiesClicked()
         {
             string myUUID = "deepwalluuidtest";
-            _myUserProperty = new DeepWallUserProperty(myUUID, "us", "en-US", DeepWallEnvironmentStyle.DARK);
+            _myUserProperty = new DeepWallUserProperty(myUUID, "us", "en-US", "55555555", "demo@mail.com", "demo", "man", DeepWallEnvironmentStyle.DARK);
 
             DeepWall.SetUserProperties(_myUserProperty);
 
@@ -59,6 +59,7 @@ namespace DeepWallModule
         {
             _myUserProperty.Language = "tr-Tr";
             _myUserProperty.Country = "tr";
+            _myUserProperty.Email = "changed@mail.com";
             _myUserProperty.EnvironmentStyle = DeepWallEnvironmentStyle.LIGHT;
 
             DeepWall.UpdateUserProperties(_myUserProperty);
